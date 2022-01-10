@@ -79,8 +79,8 @@ function initCities(){
     createCity("BERLIN", 180, "darkmagenta", 10, true);
     createCity("MOSCOU", 200, "darkorange", 11, true);
     createCity("METRO", 150, "grey", 12, true);
-    createCity("MOSCOU", 200, "darkorange", 13, true);
-    createCity("MOSCOU", 200, "darkorange", 14, true);
+    createCity("SEOUL", 200, "darkorange", 13, true);
+    createCity("SOWETO", 200, "darkorange", 14, true);
     createCity("PRISON", 0, "black", 15, false);
     createCity("ZURICH", 250, "teal", 16, true);
     createCity("RIYADH", 250, "teal", 17, true);
@@ -340,30 +340,38 @@ function changePlayer(){
 }
 
 /**
- * Allow the current player to buy the city he lands on
+ * Allow the current player to buy the city he lands on or upgrade it
  */
 function buyCity(){
     var currentPlayer = players[whoplay];
     var city = cities[currentPlayer.position-1];
-    
-    currentPlayer = sendOrRemoveMoneyToPlayer(currentPlayer, -city.price);
-    city.playerOwning = currentPlayer;
 
-    var citiesMonopoly = getOtherMonopolyCitiesOwning
-    if(getOtherMonopolyCities == citiesMonopoly){
-        citiesMonopoly.forEach(city => {
-            city.isMonopoly = true;
-            city.sellValue = Math.round(city.sellValue + city.price * 0.8);
-            city.price = Math.round(city.price / 1.5);
-            city.tax = Math.round(city.sellValue / 3);
-            
-        });
-    } else {
+    if(canUpgradeCity()){
+        city.sellValue = Math.round(city.sellValue + city.price * 0.8);
         city.tax = Math.round(city.sellValue / 3);
+        city.upgradeLeft--;
+    } else {
+        currentPlayer = sendOrRemoveMoneyToPlayer(currentPlayer, -city.price);
+        city.playerOwning = currentPlayer;
+
+        var citiesMonopoly = getOtherMonopolyCitiesOwning();
+        console.log(citiesMonopoly);
+        if(getOtherMonopolyCities().length == citiesMonopoly.length){
+            citiesMonopoly.forEach(city => {
+                city.isMonopoly = true;
+                city.sellValue = Math.round(city.sellValue + city.price * 0.8);
+                city.price = Math.round(city.price / 1.5);
+                city.tax = Math.round(city.sellValue / 3);
+                
+            });
+            alert('Monopoolyyy');
+        } else {
+            city.tax = Math.round(city.sellValue / 3);
+        }
+        changePlayer();
     }
     currentPlayer.cities.push(city);
     refresh();
-    changePlayer();
     uiShow();
 }
 
@@ -375,7 +383,14 @@ function buyCity(){
 function canBuyCity(){
     var currentPlayer = players[whoplay];
     var city = cities[currentPlayer.position-1];
-    return city.playerOwning == null && currentPlayer.money - city.price >= 0 && city.isCity;
+    return (city.playerOwning == null && currentPlayer.money - city.price >= 0 && city.isCity);
+}
+
+
+function canUpgradeCity(){
+    var currentPlayer = players[whoplay];
+    var city = cities[currentPlayer.position-1];
+    return (city.isMonopoly && city.playerOwning == currentPlayer && city.upgradeLeft != 0);
 }
 
 /**
@@ -457,13 +472,14 @@ function getPlayerTurn(turn){
  */
 function getOtherMonopolyCities(){
     var currentPlayer = players[whoplay];
-    var currentCity = cities[currentPlayer.position];
+    var currentCity = cities[currentPlayer.position-1];
     var citiesMonopoly = new Array();
     cities.forEach(city => {
         if(city.color == currentCity.color){
             citiesMonopoly.push(city);
         }
     });
+    return citiesMonopoly;
 }
 
 /**
@@ -471,13 +487,14 @@ function getOtherMonopolyCities(){
  */
 function getOtherMonopolyCitiesOwning(){
     var currentPlayer = players[whoplay];
-    var currentCity = cities[currentPlayer.position];
+    var currentCity = cities[currentPlayer.position-1];
     var citiesMonopoly = new Array();
     cities.forEach(city => {
         if(city.playerOwning == currentPlayer && city.color == currentCity.color){
             citiesMonopoly.push(city);
         }
     });
+    return citiesMonopoly;
 }
 
 
@@ -529,7 +546,7 @@ function uiDisplayScore() {
  * Display buy button
  */
 function uiDisplayBuyBtn(){
-    if(canBuyCity()){
+    if(canBuyCity() || canUpgradeCity()){
         document.getElementById('buybtn').classList.remove('desactivate');
     } else {
         document.getElementById('buybtn').classList.add('desactivate');
