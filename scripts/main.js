@@ -1,3 +1,4 @@
+//Const
 const playerObject = {
     name : null,
     color : null,
@@ -21,40 +22,49 @@ const cityObject = {
 }
 
 //variables
-var mapLength = 8;
-var rectSize = 100;
-var moneyBase = 1000;
-var mapSize = mapLength * 4 - 4;
-var canvas = document.getElementById("myCanvas");
-var ctx = canvas.getContext("2d");
-var whoplay = 0;
-var bankrupt = -500;
-var cities = new Array();
+let mapLength = 8;
+let rectSize = 100;
+let moneyBase = 1000;
+let jailTurn = 3;
+let mapSize = mapLength * 4 - 4;
+let canvas = document.getElementById("myCanvas");
+let ctx = canvas.getContext("2d");
+let bankrupt = -500;
+let salary = 200;
+let colors = ["red", "yellow", "blue", "green"];
 
+var cities = new Array();
 var players = new Array();
 
-var colors = ["red", "yellow", "blue", "green"];
+var whoplay = 0;
 
+//TODO : put this in a button
 startGame();
 
 
-
+/**
+ * Start the game
+ */
 function startGame(){
     initBoard();
     createPlayer("Charles");
     createPlayer("Nathan");
     drawPlayers();
     uiShow();
-    
-    
 }
 
+/**
+ * Initialisation of the board
+ */
 function initBoard(){
     initCities();
     drawCities();
     listenButtons();
 }
 
+/**
+ * Initialize all cities
+ */
 function initCities(){
     //initialisation map
     createCity("START", 0, "palegreen", 1, false);
@@ -88,6 +98,14 @@ function initCities(){
 }
 
 
+/**
+ * Create a city and add it to the city array
+ * @param {cityName} name 
+ * @param {cityPrice} price 
+ * @param {cityColor} color 
+ * @param {cityPosition} position 
+ * @param {isCity} isCity 
+ */
 function createCity(name, price, color, position, isCity) {
     city = Object.create(cityObject);
     city.name = name;
@@ -102,6 +120,10 @@ function createCity(name, price, color, position, isCity) {
     cities.push(city);
 }
 
+/**
+ * Create a player and add it to the player array
+ * @param {playerName} name 
+ */
 function createPlayer(name){
     var player = Object.create(playerObject);
     player.name = name;
@@ -110,7 +132,9 @@ function createPlayer(name){
     players.push(player);
 }
 
-
+/**
+ * Draw each players
+ */
 function drawPlayers(){
     players.forEach(player => {
         var position = getPosXY(player.position);
@@ -124,45 +148,51 @@ function drawPlayers(){
     });
 }
 
+/**
+ * Draw each cities
+ */
 function drawCities(){
     
     cities.forEach(city => {
-            var position = getPosXY(city.position);
-            ctx.beginPath();
-            ctx.rect(position[0], position[1], rectSize, rectSize);
-            ctx.fillStyle = city.color;
-            ctx.fill();
-            ctx.fillStyle = "white";
-            ctx.fillText(city.name, position[0]+ rectSize /2.5, position[1] + rectSize / 2);
-            ctx.strokeStyle = '#fff';
-            ctx.stroke();
-            ctx.closePath();
+        var position = getPosXY(city.position);
+        ctx.beginPath();
+        ctx.rect(position[0], position[1], rectSize, rectSize);
+        ctx.fillStyle = city.color;
+        ctx.fill();
+        ctx.fillStyle = "white";
+        ctx.fillText(city.name, position[0]+ rectSize /2.5, position[1] + rectSize / 2);
+        ctx.strokeStyle = '#fff';
+        ctx.stroke();
+        ctx.closePath();
 
-            ctx.beginPath();
-            if(city.isCity){
-                if(city.playerOwning){
-                    ctx.fillText(city.tax + "€", position[0] + rectSize /2.5, position[1] + rectSize / 4);
-                    ctx.rect(position[0], position[1], 5, 100);
-                    ctx.rect(position[0]+ rectSize - 5, position[1], 5, 100);
-                    ctx.fillStyle = city.playerOwning.color;
-                    ctx.fill();
-                } else {
-                    ctx.fillText(city.price + "€", position[0] + rectSize /2.5, position[1] + rectSize / 4);
-                }
+        ctx.beginPath();
+        if(city.isCity){
+            if(city.playerOwning){
+                ctx.fillText(city.tax + "€", position[0] + rectSize /2.5, position[1] + rectSize / 4);
+                ctx.rect(position[0], position[1], 5, 100);
+                ctx.rect(position[0]+ rectSize - 5, position[1], 5, 100);
+                ctx.fillStyle = city.playerOwning.color;
+                ctx.fill();
+            } else {
+                ctx.fillText(city.price + "€", position[0] + rectSize /2.5, position[1] + rectSize / 4);
             }
-            ctx.closePath();
-
-
-        
+        }
+        ctx.closePath();
     });
 }
 
+/**
+ * Listen to HTML buttons
+ */
 function listenButtons(){
     document.getElementById("rollbtn").addEventListener("click", play);
     document.getElementById("buybtn").addEventListener("click", buyCity);
 }
 
-
+/**
+ * Return a random number between 1 and 6
+ * @returns random between 1 and 6
+ */
 function rollDice(){
     var rollres = Math.round(Math.random() * (6 - 1) + 1);
     document.getElementById("rollres").style.background = "url(./assets/"+rollres+"dice.png)center/cover";
@@ -170,15 +200,18 @@ function rollDice(){
     return rollres;
 }
 
+/**
+ * Make player roll dice and move, also checking the city he lands on
+ */
 function play(){
     var currentPlayer = players[whoplay];
     if(isInJail()){
         changePlayer();
     } else {
-        var currentPlayer = players[whoplay];
-        var roll = 7;
+        var roll = rollDice();
         if(currentPlayer.position + roll > mapSize){
             currentPlayer.position = currentPlayer.position + roll - mapSize;
+            currentPlayer = sendOrRemoveMoneyToPlayer(currentPlayer, salary);
         } else {
             currentPlayer.position = currentPlayer.position + roll;
         }
@@ -188,6 +221,8 @@ function play(){
             payPlayer();
         } else if(isOnJail()){
             goToJail();
+        } else if(isOnLuck()){
+            getLuckCard();
         }
 
         if(!canBuyCity()){
@@ -198,35 +233,99 @@ function play(){
 }
 
 
+/**
+ * Check if the current player is in jail
+ * @returns true or false
+ */
 function isInJail(){
     var currentPlayer = players[whoplay];
-    console.log(currentPlayer);
-    console.log(whoplay);
     return currentPlayer.jailTurn != 0;
 }
 
-
+/**
+ * Check if the current player is on another city
+ * @returns true or false
+ */
 function isOnOtherCity(){
     var currentPlayer = players[whoplay];
     var city = cities[currentPlayer.position-1];
     return (city.playerOwning != null && city.playerOwning != currentPlayer && city.isCity);
 }
 
+/**
+ * Check if the player is on the jail boardSquare
+ * @returns true or false
+ */
 function isOnJail(){
-
     var currentPlayer = players[whoplay];
     var city = cities[currentPlayer.position-1];
     return city.position == 15;
+}
 
+/**
+ * Check if the player is on the Luck boardSquare
+ * @returns true or false
+ */
+function isOnLuck(){
+    var currentPlayer = players[whoplay];
+    var city = cities[currentPlayer.position-1];
+    return city.position == 8;
+}
+
+function getLuckCard(){
+    var chance = Math.random();
+    var money;
+
+    // 50% chance of being here
+    if (chance < 0.5){
+        money = - 100;
+    // 30% chance of being here
+    } else if (chance < 0.8){
+        money = 100;
+    // 15% chance of being here
+    } else if(chance < 0.95){
+        money = 200;
+    // 5% chance of being here
+    } else {
+        money = 300;
+    }
+
+    players[whoplay] = sendOrRemoveMoneyToPlayer(players[whoplay], money);
 }
 
 
+/**
+ * Give a certain amount to the given player (amount can be negative)
+ * @param {receiver} player 
+ * @param {amount} amount 
+ */
+function sendOrRemoveMoneyToPlayer(player, amount){
+    player.money += amount;
+    return player;
+}
+
+/**
+ * Check if the player is on the trade boardSquare
+ * @returns true or false
+ */
+ function isOnTrade(){
+    var currentPlayer = players[whoplay];
+    var city = cities[currentPlayer.position-1];
+    return city.position == 22;
+}
+
+/**
+ * Refresh all the ui
+ */
 function refresh(){
     uiShow();
     drawCities();
     drawPlayers();
 }
 
+/**
+ * Change turn of a player and go to the next one
+ */
 function changePlayer(){
     whoplay++;
     whoplay = getPlayerTurn(whoplay);
@@ -240,10 +339,14 @@ function changePlayer(){
     }
 }
 
+/**
+ * Allow the current player to buy the city he lands on
+ */
 function buyCity(){
     var currentPlayer = players[whoplay];
     var city = cities[currentPlayer.position-1];
-    currentPlayer.money = currentPlayer.money - city.price;
+    
+    currentPlayer = sendOrRemoveMoneyToPlayer(currentPlayer, -city.price);
     city.playerOwning = currentPlayer;
 
     var citiesMonopoly = getOtherMonopolyCitiesOwning
@@ -265,19 +368,24 @@ function buyCity(){
 }
 
 
+/**
+ * Check if the player can buy the city / an upgrade
+ * @returns true or false
+ */
 function canBuyCity(){
     var currentPlayer = players[whoplay];
     var city = cities[currentPlayer.position-1];
     return city.playerOwning == null && currentPlayer.money - city.price >= 0 && city.isCity;
 }
 
+/**
+ * Pay the player the tax of the city he lands on
+ */
 function payPlayer(){
     var currentPlayer = players[whoplay];
     var city = cities[currentPlayer.position-1];
 
-    currentPlayer.money = currentPlayer.money - city.tax;
-
-    players[whoplay] = currentPlayer;
+    players[whoplay] = sendOrRemoveMoneyToPlayer(currentPlayer, -city.tax);
 
     city.playerOwning.money += city.tax;
 
@@ -286,15 +394,16 @@ function payPlayer(){
     }
 }
 
+/**
+ * Put a player in jail (by incrementing the jailTurn of the player)
+ */
 function goToJail(){
     var currentPlayer = players[whoplay];
-    currentPlayer.jailTurn = 3;
-    var inJailCount = 1;
-    players.forEach(player => {
-        if(player != currentPlayer && player.jailTurn != 0){
-            inJailCount++;
-        }
-    });
+    currentPlayer.jailTurn = jailTurn;
+
+    let inJailCount = getNumberOfPlayersInJail();
+    
+    //If every players are in jail, we skip the turn automatically until a player gets out
     if(inJailCount == players.length){
         var isNotFinished = true;
         var i = 1;
@@ -305,8 +414,6 @@ function goToJail(){
                 isNotFinished = false;
             }
             i++;
-
-            console.log(player);
             if(i != players.length){
                 i = 1;
             }
@@ -315,13 +422,39 @@ function goToJail(){
     }
 }
 
+/**
+ * Get the number of players currently in jail
+ * @returns number of players in jail
+ */
+function getNumberOfPlayersInJail(){
+    var inJailCount = 1;
+
+    //checking the number of player in jail
+    players.forEach(player => {
+        if(player != currentPlayer && player.jailTurn != 0){
+            inJailCount++;
+        }
+    });
+    return inJailCount;
+}
+
+/**
+ * Get the player turn
+ * @param {playerTurn} turn 
+ * @returns the player actual turn
+ */
 function getPlayerTurn(turn){
+
+    //if the turn is above players.lenght, we put it back to 0
     if (turn >= players.length || turn < 0){
         turn = 0;
     }
     return turn;
 }
 
+/**
+ * Get all the other same color cities
+ */
 function getOtherMonopolyCities(){
     var currentPlayer = players[whoplay];
     var currentCity = cities[currentPlayer.position];
@@ -333,6 +466,9 @@ function getOtherMonopolyCities(){
     });
 }
 
+/**
+ * Get all the other same color cities that the current player own
+ */
 function getOtherMonopolyCitiesOwning(){
     var currentPlayer = players[whoplay];
     var currentCity = cities[currentPlayer.position];
@@ -345,6 +481,12 @@ function getOtherMonopolyCitiesOwning(){
 }
 
 
+
+/**
+ * Get XY from given index
+ * @param {position} pos 
+ * @returns XY position
+ */
 function getPosXY(pos){
     var position;
 
@@ -363,7 +505,9 @@ function getPosXY(pos){
     return position;
 }
 
-
+/**
+ * Show/ refresh UI (innetHTML)
+ */
 function uiShow(){
     uiDisplayScore();
     uiDisplayBuyBtn();
@@ -371,6 +515,9 @@ function uiShow(){
     uiDisplayTurn();
 }
 
+/**
+ * Display score
+ */
 function uiDisplayScore() {
     document.getElementById("playerslist").innerHTML = '';
     players.forEach(player => {
@@ -378,6 +525,9 @@ function uiDisplayScore() {
     });
 }
 
+/**
+ * Display buy button
+ */
 function uiDisplayBuyBtn(){
     if(canBuyCity()){
         document.getElementById('buybtn').classList.remove('desactivate');
@@ -386,6 +536,9 @@ function uiDisplayBuyBtn(){
     }
 }
 
+/**
+ * Display roll button
+ */
 function uiDisplayRollBtn(){
     if(canBuyCity()){
         document.getElementById('rollbtn').classList.add('desactivate');
@@ -394,6 +547,9 @@ function uiDisplayRollBtn(){
     }
 }
 
+/**
+ * Display player turn
+ */
 function uiDisplayTurn(){
     document.getElementById('turn').innerHTML = '<span>Turn :</span><span>'+players[whoplay].name+'</span><div style="width:2em; height: 2em; border-radius: 50%;background:'+players[whoplay].color+'"></div>';
     
