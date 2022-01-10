@@ -224,12 +224,33 @@ function play(){
         } else if(isOnLuck()){
             getLuckCard();
         }
-
-        if(!canBuyCity()){
-            changePlayer();
+        if(isBankrupt()){
+            players.splice(players.indexOf(currentPlayer), 1);
+            alert("Vous avez fait faillite !");
+        }
+        if(isGameEnded()){
+            var winner = players[0];
+            whoplay = 0;
+            alert("Partie terminée, " + winner.name + " à gagné avec " + winner.money + "€ !")
+        } else {
+            if(!canBuyCity()){
+                changePlayer();
+            }
         }
     }
     refresh();
+}
+
+function isGameEnded(){
+    return players.length == 1;
+}
+
+/**
+ * Check if a player is bankrupt
+ */
+function isBankrupt(){
+    var currentPlayer = players[whoplay];
+    return (currentPlayer.money < bankrupt);
 }
 
 
@@ -403,10 +424,6 @@ function payPlayer(){
     players[whoplay] = sendOrRemoveMoneyToPlayer(currentPlayer, -city.tax);
 
     city.playerOwning.money += city.tax;
-
-    if(currentPlayer.money < bankrupt){
-        alert("t'as perdu fdp");
-    }
 }
 
 /**
@@ -557,7 +574,7 @@ function uiDisplayBuyBtn(){
  * Display roll button
  */
 function uiDisplayRollBtn(){
-    if(canBuyCity()){
+    if(canBuyCity() || isGameEnded()){
         document.getElementById('rollbtn').classList.add('desactivate');
     } else {
         document.getElementById('rollbtn').classList.remove('desactivate');
