@@ -189,13 +189,12 @@ function play(){
         } else if(isOnJail()){
             goToJail();
         }
-        
-        refresh();
 
         if(!canBuyCity()){
             changePlayer();
         }
     }
+    refresh();
 }
 
 
@@ -233,9 +232,11 @@ function changePlayer(){
     whoplay = getPlayerTurn(whoplay);
     currentPlayer = players[whoplay];
     if(currentPlayer.jailTurn != 0){
-        whoplay++;
-        whoplay = getPlayerTurn(whoplay);
         currentPlayer.jailTurn--;
+        if(currentPlayer.jailTurn != 0){
+            whoplay++;
+            whoplay = getPlayerTurn(whoplay);
+        }
     }
 }
 
@@ -305,7 +306,7 @@ function goToJail(){
             }
             i++;
 
-            
+            console.log(player);
             if(i != players.length){
                 i = 1;
             }
