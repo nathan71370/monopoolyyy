@@ -7,24 +7,25 @@
 
 </head>
 <body>
+<div id="game-ui">
+	<canvas id="myCanvas" width="800" height="800"></canvas>
 
-<canvas id="myCanvas" width="800" height="800"></canvas>
+	<section id="board">
+		<div id="main">
+			<div id="all-btn">
+				<div id="rollbtn" class="button desactivate">ROLL</div><div id="rollres"></div>
+				<div id="buy-pass-choice">
+					<div id="buybtn" class="button desactivate">Buy</div>
+					<div id="passbtn" class="button desactivate">Pass</div>
+				</div>
+			</div>
+			<div id="playerslist"></div>
+			<div id="close-stats-ui" class="button desactivate">CLOSE STAT UI</div>
+			<div id="startGameBtn" class="button">START GAME</div>
+		</div>
+	</section>
 
-<section id="board">
-	<div id="main">
-		<div id="turn"></div>
-		<div id="rollbtn"  class="button" >ROLL</div>
-		<div id="rollres"></div>
-
-		<table id="playerslist"></table>
-
-		<div id="buybtn" class="button desactivate">Buy</div>
-
-
-
-	</div>
-</section>
-
+</div>
 
 <script src="./scripts/main.js"></script>
 

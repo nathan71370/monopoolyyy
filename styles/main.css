@@ -1,5 +1,10 @@
+/*font import */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap');
+
+
 * { 
-    padding: 0; margin: 0; 
+    padding: 0; margin: 0;
+    font-family: 'Poppins';
 }
 
 canvas {
@@ -10,21 +15,61 @@ canvas {
     padding: 20px 50px;
     background-color: gray;
     border: 1px solid black;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
    
 }
+
 #board {
     display: flex;
     align-items: center;
     justify-content: center;
 }
 #main {
-    width: 50vw;
-    
-    flex-direction: column;
+    position: relative;
+    width: 800px;
+}
+
+#startGameBtn {
+    position: absolute;
+    top:0;
+    left: 0;
+    width: 700px;
 }
 
 .desactivate {
-    display: none;
+    visibility: hidden;
+    border: 1px solid black;
+}
+
+.desactivate::after {
+    content: '';
+    height: 100%;
+    width: 100%;
+    background-color: blue !important;
+}
+
+.player-turn {
+    position: relative;
+}
+
+.player-turn ::after {
+    content: '<';
+    font-size: x-large;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 3em;
+    background: rgb(16, 228, 16);
+    border-left: 1px solid white;
+
 }
 
 #turn {
@@ -39,4 +84,41 @@ canvas {
 #rollres {
     height: 50px;
     width: 50px;
+}
+
+#buy-pass-choice {
+    display: flex;
+    flex-direction: row;
+
+}
+
+#playerslist {
+    /* display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    flex-wrap: wrap; */
+    display: grid; 
+    justify-content: space-evenly;
+    align-content: center;
+    grid-template-columns: 1fr 1fr;
+    justify-items: end;
+}
+
+#playerslist .player-container {
+    height: 5em;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+/* 
+#player-container-text {
+    padding: 2em;
+} */
+
+
+#all-btn {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: center;
 }

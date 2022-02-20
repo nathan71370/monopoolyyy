@@ -4,7 +4,7 @@ const playerObject = {
     color : null,
     position : 1,
     money : null,
-    cities : new Array(),
+    cities : null,
     jailTurn : 0,
 }
 
@@ -13,6 +13,7 @@ const cityObject = {
     sellValue : null,
     price : null,
     tax : null,
+    basePrice : null,
     color : null,
     position : null,
     playerOwning : null,
@@ -25,32 +26,42 @@ const cityObject = {
 let mapLength = 8;
 let rectSize = 100;
 let moneyBase = 1000;
+let moneyToWin = 7000;
 let jailTurn = 3;
 let mapSize = mapLength * 4 - 4;
 let canvas = document.getElementById("myCanvas");
 let ctx = canvas.getContext("2d");
 let bankrupt = -500;
 let salary = 200;
+let amountWeGetPerTrade = 100;
 let colors = ["red", "yellow", "blue", "green"];
 
 var cities = new Array();
 var players = new Array();
 
+var gameEnded = false;
+
 var whoplay = 0;
 
-//TODO : put this in a button
-startGame();
+var playerHasRoll = false;
 
+//TODO : put this in a button
+document.getElementById("startGameBtn").addEventListener("click", startGame);
 
 /**
  * Start the game
  */
 function startGame(){
+    document.getElementById("startGameBtn").classList.add('desactivate');
+    document.getElementById("close-stats-ui").classList.add('desactivate');
     initBoard();
     createPlayer("Charles");
     createPlayer("Nathan");
+    createPlayer("Gal Gadot");
+    createPlayer("Kendall Jenner");
     drawPlayers();
     uiShow();
+    drawUI();
 }
 
 /**
@@ -112,6 +123,7 @@ function createCity(name, price, color, position, isCity) {
     city.price = price;
     city.color = color;
     city.position = position;
+    city.basePrice = price;
     city.tax = Math.round(city.price / 3);
     city.sellValue = price * 0.8;
     if(isCity != undefined){
@@ -129,6 +141,7 @@ function createPlayer(name){
     player.name = name;
     player.color = colors[players.length];
     player.money = moneyBase + players.length * 50;
+    player.cities = new Array;
     players.push(player);
 }
 
@@ -139,7 +152,7 @@ function drawPlayers(){
     players.forEach(player => {
         var position = getPosXY(player.position);
         ctx.beginPath();
-        ctx.arc(position[0] + canvas.clientWidth / 40 * players.indexOf(player) + rectSize/5, position[1] + canvas.clientWidth / 15, 10, 0, Math.PI*2, false);
+        ctx.arc(position[0] + canvas.clientWidth / 40 * players.indexOf(player) + rectSize/5, position[1] + canvas.clientWidth / 10, 10, 0, Math.PI*2, false);
         ctx.fillStyle = player.color;
         ctx.fill();
         ctx.strokeStyle = '#fff';
@@ -157,27 +170,63 @@ function drawCities(){
         var position = getPosXY(city.position);
         ctx.beginPath();
         ctx.rect(position[0], position[1], rectSize, rectSize);
+        ctx.fillStyle = "#DCDCDC";
+        ctx.fill();
+        ctx.closePath();
+
+        ctx.beginPath();
+        ctx.rect(position[0], position[1], 100, 30);
         ctx.fillStyle = city.color;
         ctx.fill();
-        ctx.fillStyle = "white";
-        ctx.fillText(city.name, position[0]+ rectSize /2.5, position[1] + rectSize / 2);
-        ctx.strokeStyle = '#fff';
-        ctx.stroke();
+        ctx.closePath();
+        ctx.beginPath();
+        ctx.fillStyle = "#000";
+        ctx.font = "2em Arial";
+        ctx.font = "bolder 0.9em Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(city.name, position[0]+ 50, position[1] + 20);
         ctx.closePath();
 
         ctx.beginPath();
         if(city.isCity){
             if(city.playerOwning){
-                ctx.fillText(city.tax + "€", position[0] + rectSize /2.5, position[1] + rectSize / 4);
+                ctx.textAlign = "center";
+                ctx.fillText('↗ ' + city.tax + ' €', position[0]+ 50, position[1] + 50);
+                //ctx.fillText(city.tax + "€", position[0] + rectSize /2.5, position[1] + rectSize / 4);
                 ctx.rect(position[0], position[1], 5, 100);
                 ctx.rect(position[0]+ rectSize - 5, position[1], 5, 100);
                 ctx.fillStyle = city.playerOwning.color;
                 ctx.fill();
             } else {
-                ctx.fillText(city.price + "€", position[0] + rectSize /2.5, position[1] + rectSize / 4);
+                ctx.fillStyle = "#000";
+                ctx.textAlign = "center";
+                ctx.fillText(city.price + "€", position[0]+ 50, position[1] + 50);
+                //ctx.fillText(city.price + "€", position[0] + rectSize /2.5, position[1] + rectSize / 2);
             }
+        } else {
+            ctx.beginPath();
+            // var img = document.getElementById("bonus-img");
+            // ctx.drawImage(img, 100, 100);
+            ctx.rect(position[0], position[1], rectSize, rectSize);
+            ctx.fillStyle = city.color;
+            ctx.fill();
+            ctx.fillStyle = "#fff";
+            ctx.font = "2em Arial";
+            ctx.font = "bolder 0.9em Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(city.name, position[0]+ 50, position[1] + 50);
+            ctx.closePath();
+
         }
         ctx.closePath();
+
+        ctx.beginPath();
+        ctx.rect(position[0], position[1], rectSize, rectSize);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.closePath();
+
     });
 }
 
@@ -187,6 +236,8 @@ function drawCities(){
 function listenButtons(){
     document.getElementById("rollbtn").addEventListener("click", play);
     document.getElementById("buybtn").addEventListener("click", buyCity);
+    document.getElementById("passbtn").addEventListener("click", changePlayer);
+    document.getElementById("close-stats-ui").addEventListener("click", refresh);
 }
 
 /**
@@ -204,6 +255,8 @@ function rollDice(){
  * Make player roll dice and move, also checking the city he lands on
  */
 function play(){
+    playerHasRoll = true;
+    var playerHasBankrupt = false;
     var currentPlayer = players[whoplay];
     if(isInJail()){
         changePlayer();
@@ -215,7 +268,6 @@ function play(){
         } else {
             currentPlayer.position = currentPlayer.position + roll;
         }
-        players[whoplay] = currentPlayer;
 
         if(isOnOtherCity()){
             payPlayer();
@@ -227,22 +279,106 @@ function play(){
         if(isBankrupt()){
             players.splice(players.indexOf(currentPlayer), 1);
             alert("Vous avez fait faillite !");
+            playerHasBankrupt = true; 
         }
-        if(isGameEnded()){
+        if(isThereAWinner()){
+            gameEnded = true;
+        }
+        if(isGameEnded() || gameEnded){
             var winner = players[0];
+            gameEnded = true;
             whoplay = 0;
             alert("Partie terminée, " + winner.name + " à gagné avec " + winner.money + "€ !")
         } else {
-            if(!canBuyCity()){
+            if(!canBuyCity() && !playerHasBankrupt){
                 changePlayer();
             }
         }
     }
     refresh();
+    playerHasRoll = false;
 }
 
+
+/**
+ * Sell a city
+ */
+function sellCity(cityPos){
+    var city = getCityFromPosition(cityPos);
+    var player = city.playerOwning;
+
+    player.cities.splice(player.cities.indexOf(city), 1);
+
+    player.money += city.sellValue;
+
+    city.sellValue = city.basePrice;
+    city.price = city.basePrice;
+    city.tax = Math.round(city.basePrice / 3);
+
+    city.playerOwning = null;
+
+    cities[cities.indexOf(city)] = city;
+}
+
+/**
+ * If player land on the trade boardgame square, go in this function
+ */
+function trade(city1Pos, city2Pos){
+    var city1 = getCityFromPosition(city1Pos);
+    var city2 = getCityFromPosition(city2Pos);
+
+    var player1 = city1.playerOwning;
+    var player2 = city2.playerOwning;
+
+    player1.money += amountWeGetPerTrade;
+    player2.money += amountWeGetPerTrade;
+
+    player1.cities.splice(player1.cities.indexOf(city1), 1);
+    city1.playerOwning = player2;
+    player1.cities.push(city2);
+
+    player2.cities.splice(player2.cities.indexOf(city2), 1);
+    city2.playerOwning = player1;
+    player2.cities.push(city1);
+
+    //saving changes
+    cities[city1.position-1] = city1;
+    cities[city2.position-1] = city2;
+
+    players[players.indexOf(player1)] = player1;
+    players[players.indexOf(player2)] = player2;
+}
+
+/**
+ * Get city from position
+ * @param {position} position 
+ * @returns 
+ */
+function getCityFromPosition(position){
+    let city = cities[position];
+    return city;
+}
+
+/**
+ * Check if a player is above moneyToWin
+ * @returns true or false
+ */
+function isThereAWinner(){
+    var winner = false;
+    players.forEach(player => {
+        if(player.money >= moneyToWin){
+            winner =  true;
+        }
+    });
+    return winner;
+}
+
+/**
+ * Check if game ended
+ * @returns true or false;
+ */
 function isGameEnded(){
-    return players.length == 1;
+    return players.length == 1 || gameEnded;
 }
 
 /**
@@ -342,6 +478,8 @@ function refresh(){
     uiShow();
     drawCities();
     drawPlayers();
+    drawUI();
+    document.getElementById("close-stats-ui").classList.add('desactivate');
 }
 
 /**
@@ -358,6 +496,7 @@ function changePlayer(){
             whoplay = getPlayerTurn(whoplay);
         }
     }
+    refresh();
 }
 
 /**
@@ -367,14 +506,14 @@ function buyCity(){
     var currentPlayer = players[whoplay];
     var city = cities[currentPlayer.position-1];
 
+    currentPlayer = sendOrRemoveMoneyToPlayer(currentPlayer, -city.price);
+
     if(canUpgradeCity()){
         city.sellValue = Math.round(city.sellValue + city.price * 0.8);
         city.tax = Math.round(city.sellValue / 3);
         city.upgradeLeft--;
     } else {
-        currentPlayer = sendOrRemoveMoneyToPlayer(currentPlayer, -city.price);
         city.playerOwning = currentPlayer;
-
         var citiesMonopoly = getOtherMonopolyCitiesOwning();
         console.log(citiesMonopoly);
         if(getOtherMonopolyCities().length == citiesMonopoly.length){
@@ -389,11 +528,12 @@ function buyCity(){
         } else {
             city.tax = Math.round(city.sellValue / 3);
         }
+        currentPlayer.cities.push(city);
         changePlayer();
     }
-    currentPlayer.cities.push(city);
     refresh();
     uiShow();
+    drawUI()
 }
 
 
@@ -404,7 +544,7 @@ function buyCity(){
 function canBuyCity(){
     var currentPlayer = players[whoplay];
     var city = cities[currentPlayer.position-1];
-    return (city.playerOwning == null && currentPlayer.money - city.price >= 0 && city.isCity);
+    return (city.playerOwning == null && currentPlayer.money - city.price >= 0 && city.isCity && playerHasRoll);
 }
 
 
@@ -546,7 +686,11 @@ function uiShow(){
     uiDisplayScore();
     uiDisplayBuyBtn();
     uiDisplayRollBtn();
-    uiDisplayTurn();
+
+    players.forEach(player => {
+
+        uiListenBtnPlayerInfo(player);
+    });
 }
 
 /**
@@ -555,18 +699,24 @@ function uiShow(){
 function uiDisplayScore() {
     document.getElementById("playerslist").innerHTML = '';
     players.forEach(player => {
-        document.getElementById("playerslist").innerHTML += '<tr class="playerslist-row"><td>'+player.name+' :</td> <td>'+player.money+' €</td></tr>';
+        document.getElementById("playerslist").innerHTML += '<div id="player-num-'+ player.name +'" class="player-container" style="background:'+player.color+'"><div id="player-container-text"><span>'+player.name+' :</span> <span>'+player.money+' €</span></div></div>';
+        if(players[whoplay] == player){
+            document.getElementById('player-num-'+player.name).classList.add('player-turn');
+        }
     });
+    
 }
 
 /**
  * Display buy button
  */
 function uiDisplayBuyBtn(){
-    if(canBuyCity() || canUpgradeCity()){
+    if((canBuyCity() || canUpgradeCity()) && !isGameEnded()){
         document.getElementById('buybtn').classList.remove('desactivate');
+        document.getElementById('passbtn').classList.remove('desactivate');
     } else {
         document.getElementById('buybtn').classList.add('desactivate');
+        document.getElementById('passbtn').classList.add('desactivate');
     }
 }
 
@@ -576,15 +726,117 @@ function uiDisplayBuyBtn(){
 function uiDisplayRollBtn(){
     if(canBuyCity() || isGameEnded()){
         document.getElementById('rollbtn').classList.add('desactivate');
+        document.getElementById('rollres').classList.remove('desactivate');
     } else {
         document.getElementById('rollbtn').classList.remove('desactivate');
+        document.getElementById('rollres').classList.add('desactivate');
     }
 }
 
-/**
- * Display player turn
- */
-function uiDisplayTurn(){
-    document.getElementById('turn').innerHTML = '<span>Turn :</span><span>'+players[whoplay].name+'</span><div style="width:2em; height: 2em; border-radius: 50%;background:'+players[whoplay].color+'"></div>';
+
+function uiListenBtnPlayerInfo(player) {
+    document.getElementById("player-num-"+player.name).addEventListener("click", ()=>  {
+        playerStatsUI(player);
+    });
+}
+
+function drawUI() {
+    ctx.beginPath();
+    ctx.rect(106, 106, 588, 588);
+    ctx.fillStyle = "#fff";
+    ctx.fill();
+    ctx.closePath();
+
+    ctx.beginPath();
+    ctx.rect(112, 112, 288, 288);
+    ctx.fillStyle = "#DCDCDC";
+    ctx.fill();
+    ctx.closePath();
+
+    ctx.beginPath();
+    ctx.rect(410, 112, 278, 288);
+    ctx.fillStyle = "#DCDCDC";
+    ctx.fill();
+    ctx.closePath();
+
+    ctx.beginPath();
+    ctx.rect(112, 410, 288, 278);
+    ctx.fillStyle = "#DCDCDC";
+    ctx.fill();
+    ctx.closePath();
+
+    ctx.beginPath();
+    ctx.rect(410, 410, 278, 278);
+    ctx.fillStyle = "#DCDCDC";
+    ctx.fill();
+    ctx.closePath();
+
+    players.forEach((player, index) => {
+        ctx.beginPath();
+        ctx.fillStyle = "#000";
+        ctx.font = "2em Arial";
+        ctx.font = "bolder .9em Arial";
+        switch (index) {
+            case 0:
+                ctx.textAlign = "left";
+                ctx.fillText(player.name, 132, 142);
+                ctx.fillText(player.money + ' €', 132, 162);
+                ctx.font = ".8em Arial";
+                player.cities.forEach((city, i) =>  ctx.fillText(city.name, 132, 182  + 15 * i))
+            break;
+            case 1:
+                ctx.textAlign = "left";
+                ctx.fillText(player.name, 430, 142);
+                ctx.fillText(player.money + ' €', 430, 162);
+                ctx.font = ".8em Arial";
+                player.cities.forEach((city, i) =>  ctx.fillText(city.name, 430, 182 + 15 * i))
+            break;
+            case 2:
+                ctx.textAlign = "left";
+                ctx.fillText(player.name, 132, 440);
+                ctx.fillText(player.money + ' €', 132, 460);
+                ctx.font = ".8em Arial";
+                player.cities.forEach((city, i) =>  ctx.fillText(city.name, 132, 480 + 15 * i))
+            break;
+            case 3:
+                ctx.textAlign = "left";
+                ctx.fillText(player.name, 430, 440);
+                ctx.fillText(player.money + ' €', 430, 460);
+                ctx.font = ".8em Arial";
+                player.cities.forEach((city, i) =>  ctx.fillText(city.name, 430, 480 + 15 * i))
+            break;
+        }
+        
+        ctx.closePath();
+    });
+
     
+}
+
+function playerStatsUI(player) {
+    const path = new Path2D()
+    path.rect(200, 200, 400, 400)
+    path.closePath()
+
+    ctx.fillStyle = "rgba(0,0,0,1)"
+    ctx.fill(path)
+    ctx.lineWidth = 2
+    ctx.strokeStyle = "#fff"
+    ctx.stroke(path)
+
+    ctx.beginPath();
+    ctx.font = "1.2em Arial";
+    ctx.fillStyle = "#fff";
+    ctx.fillText(player.name, 220, 230);
+    ctx.fillText('Money : ' + player.money + ' €', 220, 250);
+    
+    player.cities.forEach((city, index) =>  {
+        ctx.fillStyle = city.color;
+        ctx.font = "0.9em Arial";
+        ctx.fillText(city.name + ' ( Tax: ' + city.tax + ' € Sell Value: '+ city.sellValue +' €)', 220, 270 + index*20)
+    })
+    ctx.fill();
+    ctx.closePath();
+
+    document.getElementById("close-stats-ui").classList.remove('desactivate');
 }
